@@ -1,4 +1,5 @@
 from scipy import signal
+from collections import deque
 
 
 class DisturbanceObserver:
@@ -22,16 +23,17 @@ class DisturbanceObserver:
         ]
         self._inverse_filtered_plant = signal.cont2discrete((num_cont, den_cont), dt=1)
 
-        self._inverse_plant_u_buffer = [0.0, 0.0]
-        self._inverse_plant_y_buffer = [0.0, 0.0]
+        self._inverse_plant_u_buffer = deque([0.0, 0.0], maxlen=2)
+        self._inverse_plant_y_buffer = deque([0.0, 0.0], maxlen=2)
 
         # action filter
         self._action_filter = signal.cont2discrete(
             ([1], [self._T_filter**2, 2 * self._T_filter, 1]), dt=1
         )
 
-        self._action_filter_u_buffer = [0.0, 0.0, 0.0]
-        self._action_filter_y_buffer = [0.0, 0.0]
+        # Note: Action is delayed by one step --> u_buffer size = 3
+        self._action_filter_u_buffer = deque([0.0, 0.0, 0.0], maxlen=3)
+        self._action_filter_y_buffer = deque([0.0, 0.0], maxlen=2)
 
     def update(self, measurement):
         """
@@ -61,11 +63,11 @@ class DisturbanceObserver:
             + num[2] * self._inverse_plant_u_buffer[1]
         )
 
-        self._inverse_plant_u_buffer[1] = self._inverse_plant_u_buffer[0]
-        self._inverse_plant_y_buffer[1] = self._inverse_plant_y_buffer[0]
+        self._inverse_plant_y_buffer.pop()
+        self._inverse_plant_y_buffer.appendleft(y_k)
 
-        self._inverse_plant_u_buffer[0] = measurement
-        self._inverse_plant_y_buffer[0] = y_k
+        self._inverse_plant_u_buffer.pop()
+        self._inverse_plant_u_buffer.appendleft(measurement)
 
         return y_k
 
@@ -85,14 +87,11 @@ class DisturbanceObserver:
             + num[2] * self._action_filter_u_buffer[2]
         )
 
-        self._action_filter_y_buffer[1] = self._action_filter_y_buffer[0]
+        self._action_filter_y_buffer.pop()
+        self._action_filter_y_buffer.appendleft(y_k)
 
-        # Note: This delays the action one step --> delay will not be compensated
-        self._action_filter_u_buffer[2] = self._action_filter_u_buffer[1]
-        self._action_filter_u_buffer[1] = self._action_filter_u_buffer[0]
-
-        self._action_filter_y_buffer[0] = y_k
-        self._action_filter_u_buffer[0] = action
+        self._action_filter_u_buffer.pop()
+        self._action_filter_u_buffer.appendleft(action)
 
         return y_k
 
@@ -100,5 +99,5 @@ class DisturbanceObserver:
         """
         Applied action needs to be stored for action filter update in next cycle
         """
-
-        self._action_filter_u_buffer[0] = action
+        self._action_filter_u_buffer.popleft()
+        self._action_filter_u_buffer.appendleft(action)
