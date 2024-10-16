@@ -9,7 +9,7 @@ class Controller(BaseController):
     A disturbance observer based controller
     """
 
-    def __init__(self, T_model: float = 1.2, T_filter: float = 2.1):
+    def __init__(self, T_model: float = 1.27, T_filter: float = 2.15):
         # nonlinear mapping
         self._nonlinearity: sn.StaticNonlinearity = sn.ArctanNonlinearity(A=1.5, B=0.45)
 
