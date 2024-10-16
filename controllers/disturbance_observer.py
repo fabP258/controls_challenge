@@ -5,7 +5,7 @@ class DisturbanceObserver:
 
     def __init__(self, T_model: float, T_filter: float):
 
-        # first order model + delay (Pade approximation)
+        # second order model, nonlinear gain assumed to be compensated by inverse nonlinearity
         self._T_model = T_model
         self._D_model = 1.0
         self._K_model = 1.0
@@ -47,6 +47,9 @@ class DisturbanceObserver:
         return corrective_action
 
     def update_inverse_filtered_plant(self, measurement: float) -> float:
+        """
+        Update the state of the inverse filtered plant
+        """
         num = self._inverse_filtered_plant[0][0]
         den = self._inverse_filtered_plant[1]
 
@@ -67,6 +70,10 @@ class DisturbanceObserver:
         return y_k
 
     def update_action_filter(self, action: float) -> float:
+        """
+        Update the action filter state
+        """
+
         num = self._action_filter[0][0]
         den = self._action_filter[1]
 
@@ -80,8 +87,7 @@ class DisturbanceObserver:
 
         self._action_filter_y_buffer[1] = self._action_filter_y_buffer[0]
 
-        # Note: This delays the action by two steps --> delay will not be compensated
-        # self._action_filter_u_buffer[3] = self._action_filter_u_buffer[2]
+        # Note: This delays the action one step --> delay will not be compensated
         self._action_filter_u_buffer[2] = self._action_filter_u_buffer[1]
         self._action_filter_u_buffer[1] = self._action_filter_u_buffer[0]
 
@@ -90,9 +96,9 @@ class DisturbanceObserver:
 
         return y_k
 
-    def store_action(self, action):
+    def store_action(self, action: float):
         """
-        Applied action needs to be stored for action filter update
+        Applied action needs to be stored for action filter update in next cycle
         """
 
         self._action_filter_u_buffer[0] = action

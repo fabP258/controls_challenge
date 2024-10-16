@@ -27,8 +27,6 @@ class Controller(BaseController):
         # DEBUG
         self.linear_action_history = []
 
-        # TODO: increase u buffer in DOB
-
     def update(self, target_lataccel, current_lataccel, state, future_plan):
 
         # feedforward control
